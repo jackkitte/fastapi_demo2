@@ -2,11 +2,29 @@ version: '3'
 
 services:
   server:
+    container_name: fastapi_demo
     build:
       context: .
       dockerfile: ./backend/Dockerfile
+    env_file:
+      - ./backend/.env
     volumes:
       - .:/src
     command: uvicorn app.api.server:app --reload --workers 1 --host 0.0.0.0 --port 8000
     ports:
       - 8000:8000
+    depends_on:
+      - db
+
+  db:
+    container_name: postgres
+    image: postgres:14
+    env_file:
+      - ./backend/.env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    ports:
+      - 5432:5432
+
+volumes:
+  postgres_data:
