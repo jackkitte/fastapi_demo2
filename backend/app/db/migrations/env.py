@@ -1,3 +1,5 @@
+import logging
+import os
 import pathlib
 import sys
 from logging.config import fileConfig
@@ -10,15 +12,23 @@ from sqlalchemy import engine_from_config, pool
 
 config = alembic.context.config
 fileConfig(config.config_file_name)
-config.set_main_option("sqlalchemy.url", str(DATABASE_URL))
+logger = logging.getLogger("alembic.env")
 
 
 def run_migrations_online() -> None:
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    CONTAINER_DSN = os.environ.get("CONTAINER_DSN", "")
+    DB_URL = CONTAINER_DSN if CONTAINER_DSN else DATABASE_URL
+    logger.info(f"Run migrate on {str(DB_URL)}")
+
+    connectable = config.attributes.get("connection", None)
+    config.set_main_option("sqlalchemy.url", str(DB_URL))
+
+    if connectable is None:
+        connectable = engine_from_config(
+            config.get_section(config.config_ini_section),
+            prefix="sqlalchemy.",
+            poolclass=pool.NullPool,
+        )
 
     with connectable.connect() as connection:
         alembic.context.configure(connection=connection, target_metadata=None)

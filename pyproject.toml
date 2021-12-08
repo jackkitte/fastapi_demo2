@@ -17,6 +17,11 @@ python-dateutil = "^2.8.2"
 [tool.poetry.dev-dependencies]
 black = "^21.12b0"
 mypy = "^0.910"
+pytest = "^6.2.5"
+pytest-asyncio = "^0.16.0"
+httpx = "^0.21.1"
+asgi-lifespan = "^1.0.1"
+docker = "^5.0.3"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
