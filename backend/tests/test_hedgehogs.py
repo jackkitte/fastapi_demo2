@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional, Union
 
 import pytest
 from app.models.hedgehog import HedgehogCreate, HedgehogInDB
@@ -95,7 +95,137 @@ class TestGetHedgeHog:
         ),
     )
     async def test_wrong_id_returns_error(
-        self, app: FastAPI, client: AsyncClient, id: Optional[int], status_code: int
+        self,
+        app: FastAPI,
+        client: AsyncClient,
+        id: Optional[int],
+        status_code: int,
     ) -> None:
         res = await client.get(app.url_path_for("hedgehogs:get-hedgehog-by-id", id=id))
+        assert res.status_code == status_code
+
+    async def test_get_all_hedgehogs_returns_valid_response(
+        self,
+        app: FastAPI,
+        client: AsyncClient,
+        test_hedgehog: HedgehogInDB,
+    ) -> None:
+        res = await client.get(app.url_path_for("hedgehogs:get-all-hedgehogs"))
+        assert res.status_code == HTTP_200_OK
+        assert isinstance(res.json(), list)
+        assert len(res.json()) > 0
+        hedgehogs = [HedgehogInDB(**item) for item in res.json()]
+        assert test_hedgehog in hedgehogs
+
+
+class TestUpdateHedgehog:
+    @pytest.mark.parametrize(
+        "attrs_to_change, values",
+        (
+            (["name"], ["new fake hedgehog name"]),
+            (["description"], ["new fake hedgehog description"]),
+            (["age"], [3.14]),
+            (["color_type"], ["DARK GREY"]),
+            (
+                ["name", "description"],
+                ["extra new fake hedgehog name", "extra new fake hedgehog description"],
+            ),
+            (["age", "color_type"], [2.00, "CHOCOLATE"]),
+        ),
+    )
+    async def test_update_hedgehog_with_valid_input(
+        self,
+        app: FastAPI,
+        client: AsyncClient,
+        test_hedgehog: HedgehogInDB,
+        attrs_to_change: List[str],
+        values: List[Union[str, float]],
+    ) -> None:
+        hedgehog_update = {
+            "hedgehog_update": {
+                attrs_to_change[i]: values[i] for i in range(len(attrs_to_change))
+            }
+        }
+        print(hedgehog_update)
+        res = await client.put(
+            app.url_path_for("hedgehogs:update-hedgehog-by-id", id=test_hedgehog.id),
+            json=hedgehog_update,
+        )
+        assert res.status_code == HTTP_200_OK
+        update_hedgehog = HedgehogInDB(**res.json())
+        assert update_hedgehog.id == test_hedgehog.id
+
+        for i in range(len(attrs_to_change)):
+            assert getattr(update_hedgehog, attrs_to_change[i]) != getattr(
+                test_hedgehog, attrs_to_change[i]
+            )
+            assert getattr(update_hedgehog, attrs_to_change[i]) == values[i]
+
+        for attr, value in update_hedgehog.dict().items():
+            if attr not in attrs_to_change:
+                assert getattr(test_hedgehog, attr) == value
+
+    @pytest.mark.parametrize(
+        "id, payload, status_code",
+        (
+            (-1, {"name": "test"}, 422),
+            (0, {"name": "test2"}, 422),
+            (500, {"name": "test3"}, 404),
+            (1, None, 422),
+            (1, {"color_type": "invalid hedgehog type"}, 422),
+            (1, {"color_type": None}, 400),
+        ),
+    )
+    async def test_update_hedgehog_with_invalid_input_throws_error(
+        self,
+        app: FastAPI,
+        client: AsyncClient,
+        id: int,
+        payload: dict,
+        status_code: int,
+    ) -> None:
+        hedgehog_update = {"hedgehog_update": payload}
+        res = await client.put(
+            app.url_path_for("hedgehogs:update-hedgehog-by-id", id=id),
+            json=hedgehog_update,
+        )
+        assert res.status_code == status_code
+
+
+class TestDeleteHedgehog:
+    async def test_can_delete_hedgehog_successfully(
+        self,
+        app: FastAPI,
+        client: AsyncClient,
+        test_hedgehog: HedgehogInDB,
+    ) -> None:
+        res = await client.delete(
+            app.url_path_for("hedgehogs:delete-hedgehog-by-id", id=test_hedgehog.id)
+        )
+        assert res.status_code == HTTP_200_OK
+
+        res = await client.get(
+            app.url_path_for("hedgehogs:get-hedgehog-by-id", id=test_hedgehog.id)
+        )
+        assert res.status_code == HTTP_404_NOT_FOUND
+
+    @pytest.mark.parametrize(
+        "id, status_code",
+        (
+            (500, 404),
+            (0, 422),
+            (-1, 422),
+            (None, 422),
+        ),
+    )
+    async def test_delete_invalid_input_throws_error(
+        self,
+        app: FastAPI,
+        client: AsyncClient,
+        id: Optional[int],
+        status_code: int,
+    ) -> None:
+        res = await client.delete(
+            app.url_path_for("hedgehogs:delete-hedgehog-by-id", id=id)
+        )
         assert res.status_code == status_code

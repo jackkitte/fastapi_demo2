@@ -23,8 +23,7 @@ class HedgehogCreate(HedgehogBase):
 
 
 class HedgehogUpdate(HedgehogBase):
-    description: str
-    age: float
+    color_type: Optional[ColorType]
 
 
 class HedgehogInDB(IDModelMixin, HedgehogBase):
