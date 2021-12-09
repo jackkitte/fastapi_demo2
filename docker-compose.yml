@@ -18,7 +18,7 @@ services:
       - db
 
   db:
-    container_name: postgres
+    container_name: fastapi_db
     image: postgres:14
     env_file:
       - ./backend/.env

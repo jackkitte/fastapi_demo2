@@ -36,7 +36,10 @@ def postgres_container(docker: pydocker.APIClient) -> Generator:
 
     image = "postgres:14"
     docker.pull(image)
-    command = """head -1 /proc/self/cgroup | cut -d/ -f3"""
+    # command = """head -1 /proc/self/cgroup | cut -d/ -f3"""
+    command = (
+        """cat /proc/self/mountinfo | grep -i hosts | awk '{print $4}' | cut -d/ -f4"""
+    )
     bin_own_container_id = subprocess.check_output(["sh", "-c", command])
     own_container_id = bin_own_container_id.decode().replace("\n", "")
     inspection = docker.inspect_container(own_container_id)
