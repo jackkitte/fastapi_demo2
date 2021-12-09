@@ -6,6 +6,11 @@ CREATE_HEDGEHOG_QUERY = """
     VALUES (:name, :description, :age, :color_type)
     RETURNING id, name, description, age, color_type;
 """
+GET_HEDGEHOG_BY_ID_QUERY = """
+    SELECT id, name, description, age, color_type
+    FROM hedgehogs
+    WHERE id = :id;
+"""
 
 
 class HedgehogsRepository(BaseRepository):
@@ -15,4 +20,13 @@ class HedgehogsRepository(BaseRepository):
             query=CREATE_HEDGEHOG_QUERY, values=query_values
         )
 
+        return HedgehogInDB(**hedgehog)
+
+    async def get_hedgehog_by_id(self, *, id: int) -> HedgehogInDB:
+        hedgehog = await self.db.fetch_one(
+            query=GET_HEDGEHOG_BY_ID_QUERY,
+            values={"id": id},
+        )
+        if not hedgehog:
+            return None
         return HedgehogInDB(**hedgehog)

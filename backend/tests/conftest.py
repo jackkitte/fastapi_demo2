@@ -98,3 +98,16 @@ async def client(app: FastAPI) -> AsyncGenerator[AsyncClient, None]:
             headers={"Content-Type": "application/json"},
         ) as client:
             yield client
+
+
+@pytest.fixture
+async def test_hedgehog(db: Database) -> HedgehogInDB:
+    hedgehog_repo = HedgehogsRepository(db)
+    new_hedgehog = HedgehogCreate(
+        name="fake hedgehog name",
+        description="fake description",
+        age=2.2,
+        color_type="SALT & PEPPER",
+    )
+
+    return await hedgehog_repo.create_hedgehog(new_hedgehog=new_hedgehog)
