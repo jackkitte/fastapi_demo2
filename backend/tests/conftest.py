@@ -74,7 +74,7 @@ def postgres_container(docker: pydocker.APIClient) -> Generator:
         yield container
     finally:
         docker.kill(container["Id"])
-        docker.remove_container(container["Id"])
+        docker.remove_container(container["Id"], v=True)
 
 
 @pytest.fixture
