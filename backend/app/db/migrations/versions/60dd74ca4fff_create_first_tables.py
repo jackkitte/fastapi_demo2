@@ -24,6 +24,7 @@ def create_updated_at_trigger() -> None:
         $$
         BEGIN
             NEW.updated_at = now();
+            RETURN NEW;
         END;
         $$ language 'plpgsql';
         """
