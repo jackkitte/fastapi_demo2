@@ -9,7 +9,9 @@ import docker as pydocker
 import pytest
 from alembic.config import Config
 from app.db.repositories.hedgehogs import HedgehogsRepository
+from app.db.repositories.users import UsersRepository
 from app.models.hedgehog import HedgehogCreate, HedgehogInDB
+from app.models.user import UserCreate, UserInDB
 from asgi_lifespan import LifespanManager
 from databases import Database
 from fastapi import FastAPI
@@ -111,3 +113,16 @@ async def test_hedgehog(db: Database) -> HedgehogInDB:
     )
 
     return await hedgehog_repo.create_hedgehog(new_hedgehog=new_hedgehog)
+
+
+@pytest.fixture
+async def test_user(db: Database) -> UserInDB:
+    new_user = UserCreate(
+        email="nmomo@mail.com", username="nmomoishedgehog", password="nmomosissocute"
+    )
+    user_repo = UsersRepository(db)
+    existing_user = await user_repo.get_user_by_email(email=new_user.email)
+    if existing_user:
+        return existing_user
+
+    return await user_repo.register_new_user(new_user=new_user)
