@@ -1,7 +1,8 @@
+from app.api.dependencies.auth import get_current_active_user
 from app.api.dependencies.database import get_repository
 from app.db.repositories.users import UsersRepository
 from app.models.token import AccessToken
-from app.models.user import UserCreate, UserPublic
+from app.models.user import UserCreate, UserInDB, UserPublic
 from app.services import auth_service
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -50,3 +51,10 @@ async def user_login_with_email_and_password(
     )
 
     return access_token
+
+
+@router.get("/me/", response_model=UserPublic, name="users:get-current-user")
+async def get_currently_authenticated_user(
+    current_user: UserInDB = Depends(get_current_active_user),
+) -> UserPublic:
+    return current_user
