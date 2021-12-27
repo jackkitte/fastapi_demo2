@@ -1,6 +1,8 @@
 from typing import Optional
 
 from app.db.repositories.base import BaseRepository
+from app.db.repositories.profiles import ProfilesRepository
+from app.models.profile import ProfileCreate
 from app.models.user import UserCreate, UserInDB
 from app.services import auth_service
 from databases import Database
@@ -42,6 +44,7 @@ class UsersRepository(BaseRepository):
     def __init__(self, db: Database) -> None:
         super().__init__(db)
         self.auth_service = auth_service
+        self.profiles_repo = ProfilesRepository(db)
 
     async def get_user_by_email(self, *, email: EmailStr) -> UserInDB:
         user_record = await self.db.fetch_one(
@@ -77,6 +80,9 @@ class UsersRepository(BaseRepository):
         new_user_params = new_user.copy(update=user_password_update.dict())
         created_user = await self.db.fetch_one(
             query=REGISTER_NEW_USER_QUERY, values=new_user_params.dict()
+        )
+        await self.profiles_repo.create_profile_for_user(
+            profile_create=ProfileCreate(user_id=created_user["id"])
         )
         return UserInDB(**created_user)
 
