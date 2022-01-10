@@ -1,3 +1,5 @@
+from pprint import pprint
+
 from app.api.dependencies.auth import get_current_active_user
 from app.api.dependencies.database import get_repository
 from app.db.repositories.users import UsersRepository
@@ -26,7 +28,7 @@ async def register_new_user(
         access_token=auth_service.create_access_token_for_user(user=created_user),
         token_type="bearer",
     )
-    return UserPublic(**created_user.dict(), access_token=access_token)
+    return created_user.copy(update={"access_token": access_token})
 
 
 @router.post(

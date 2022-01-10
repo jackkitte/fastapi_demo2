@@ -3,7 +3,7 @@ from typing import Optional
 from app.db.repositories.base import BaseRepository
 from app.db.repositories.profiles import ProfilesRepository
 from app.models.profile import ProfileCreate
-from app.models.user import UserCreate, UserInDB
+from app.models.user import UserCreate, UserInDB, UserPublic
 from app.services import auth_service
 from databases import Database
 from fastapi import HTTPException, status
@@ -46,21 +46,29 @@ class UsersRepository(BaseRepository):
         self.auth_service = auth_service
         self.profiles_repo = ProfilesRepository(db)
 
-    async def get_user_by_email(self, *, email: EmailStr) -> UserInDB:
+    async def get_user_by_email(
+        self, *, email: EmailStr, populate: bool = True
+    ) -> UserInDB:
         user_record = await self.db.fetch_one(
             query=GET_USER_BY_EMAIL_QUERY, values={"email": email}
         )
-        if not user_record:
-            return None
-        return UserInDB(**user_record)
+        if user_record:
+            user = UserInDB(**user_record)
+            if populate:
+                return await self.populate_user(user=user)
+            return user
 
-    async def get_user_by_username(self, *, username: str) -> UserInDB:
+    async def get_user_by_username(
+        self, *, username: str, populate: bool = True
+    ) -> UserInDB:
         user_record = await self.db.fetch_one(
             query=GET_USER_BY_USERNAME_QUERY, values={"username": username}
         )
-        if not user_record:
-            return None
-        return UserInDB(**user_record)
+        if user_record:
+            user = UserInDB(**user_record)
+            if populate:
+                return await self.populate_user(user=user)
+            return user
 
     async def register_new_user(self, *, new_user: UserCreate) -> UserInDB:
         if await self.get_user_by_email(email=new_user.email):
@@ -84,12 +92,12 @@ class UsersRepository(BaseRepository):
         await self.profiles_repo.create_profile_for_user(
             profile_create=ProfileCreate(user_id=created_user["id"])
         )
-        return UserInDB(**created_user)
+        return await self.populate_user(user=UserInDB(**created_user))
 
     async def authenticate_user(
         self, *, email: EmailStr, password: str
     ) -> Optional[UserInDB]:
-        user = await self.get_user_by_email(email=email)
+        user = await self.get_user_by_email(email=email, populate=False)
         if not user:
             return None
         if not self.auth_service.verify_password(
@@ -97,3 +105,9 @@ class UsersRepository(BaseRepository):
         ):
             return None
         return user
+
+    async def populate_user(self, *, user: UserInDB) -> UserInDB:
+        return UserPublic(
+            **user.dict(),
+            profile=await self.profiles_repo.get_profile_by_user_id(user_id=user.id)
+        )
